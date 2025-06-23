@@ -33,15 +33,17 @@ router.post('/schedules', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/my-schedule — For employees to view their assigned shifts
+// GET /api/my-schedule — For employees and managers to view their assigned shifts
 router.get('/my-schedule', authenticateToken, async (req, res) => {
     const { user } = req;
 
     try {
-        // Confirm this user is an employee
+        // Allow both roles
         const userRole = await db.query('SELECT role FROM users WHERE id = $1', [user.userId]);
-        if (userRole.rows[0].role !== 'employee') {
-            return res.status(403).json({ message: 'Only employees can access this route' });
+        const role = userRole.rows[0].role;
+
+        if (!['employee', 'manager'].includes(role)) {
+            return res.status(403).json({ message: 'Access denied' });
         }
 
         // Get employee_id from employees table
