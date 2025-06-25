@@ -23,4 +23,19 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /employees - Get all employees (id and email as "name")
+router.get('/', authenticateToken, async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT e.id, u.email AS name
+            FROM employees e
+            JOIN users u ON e.user_id = u.id
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Error fetching employees:', err);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
