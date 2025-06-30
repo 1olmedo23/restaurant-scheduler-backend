@@ -33,52 +33,50 @@ router.post('/schedules', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/my-schedule — For employees and managers to view their assigned shifts
+// GET /api/my-schedule
 router.get('/my-schedule', authenticateToken, async (req, res) => {
-    const { user } = req;
+  const { user } = req;
 
-    try {
-        // Allow both roles
-        const userRole = await db.query('SELECT role FROM users WHERE id = $1', [user.userId]);
-        const role = userRole.rows[0].role;
+  try {
+    const userRole = await db.query('SELECT role FROM users WHERE id = $1', [user.userId]);
+    const role = userRole.rows[0].role;
 
-        if (!['employee', 'manager'].includes(role)) {
-            return res.status(403).json({ message: 'Access denied' });
-        }
-
-        // Get employee_id from employees table
-        const employeeResult = await db.query(
-            'SELECT id FROM employees WHERE user_id = $1',
-            [user.userId]
-        );
-
-        if (employeeResult.rows.length === 0) {
-            return res.status(404).json({ message: 'Employee profile not found' });
-        }
-
-        const employeeId = employeeResult.rows[0].id;
-
-        // Get scheduled shifts
-        const scheduleResult = await db.query(
-            `SELECT schedules.id AS schedule_id, shift_date, start_time, end_time, status
-             FROM schedules
-             JOIN shifts ON schedules.shift_id = shifts.id
-             WHERE schedules.employee_id = $1
-             AND shift_date >= CURRENT_DATE
-             AND shift_date < CURRENT_DATE + INTERVAL '14 days'
-             ORDER BY shift_date`,
-            [employeeId]
-        );
-
-        res.json({
-            message: 'Schedule retrieved successfully',
-            schedule: scheduleResult.rows
-        });
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Server error' });
+    if (!['employee', 'manager'].includes(role)) {
+      return res.status(403).json({ message: 'Access denied' });
     }
+
+    const employeeResult = await db.query(
+      'SELECT id FROM employees WHERE user_id = $1',
+      [user.userId]
+    );
+
+    if (employeeResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Employee profile not found' });
+    }
+
+    const employeeId = employeeResult.rows[0].id;
+
+      const scheduleResult = await db.query(
+          `SELECT schedules.id AS schedule_id, shift_date, start_time, end_time, status, position
+   FROM schedules
+   JOIN shifts ON schedules.shift_id = shifts.id
+   WHERE schedules.employee_id = $1
+   AND shift_date >= CURRENT_DATE
+   AND shift_date < CURRENT_DATE + INTERVAL '14 days'
+   ORDER BY shift_date`,
+          [employeeId]
+      );
+
+
+    res.json({
+      message: 'Schedule retrieved successfully',
+      schedule: scheduleResult.rows
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // PATCH /api/schedules/:id/call-off — manager calls off employee
